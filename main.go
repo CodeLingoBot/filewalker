@@ -9,12 +9,14 @@ import (
 	"log"
 	"os"
 	"strings"
+	"path/filepath"
 	//_ "github.com/mattn/go-sqlite3"
 )
 
-var initialPath = flag.String("initial-path", "", "Initial path")
+var i = 1
 
-var i = 0
+var initialPath string = ""
+var reportOnly bool = false
 
 func listFiles(path string) {
 	files, err := ioutil.ReadDir(path)
@@ -42,8 +44,9 @@ func listFiles(path string) {
 				log.Fatal(err)
 			}
 
-			fmt.Printf("%v\t%x %v\n", i, hash.Sum(nil), fullyQualifiedFilename)
-			//fmt.Println("%x, %s", hash.Sum(nil), )
+			info, err := f.Stat()
+
+			fmt.Printf("%v\t%x\t%v\t%v\n", i, hash.Sum(nil), info.Size(), fullyQualifiedFilename)
 
 			i++
 		}
@@ -57,10 +60,42 @@ func checkErr(err error) {
 }
 
 func main() {
+	var help bool = false
+	flag.BoolVar(&help, "help", help, "Help")
+	flag.StringVar(&initialPath, "initial-path", "./", "Set the top level directory to begin scan.")
+	flag.BoolVar(&reportOnly, "report-only", false, "")
 
-	//args := os.Args
+	flag.Parse()
 
-	fmt.Println(initialPath)
+	if help {
+        fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		return
+	}
+
+	initialPath := strings.TrimSpace(initialPath)
+
+	fileInfo, err := os.Lstat(initialPath)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if !fileInfo.IsDir() {
+		log.Fatal(fmt.Sprintf("%v is not a directory.", initialPath))
+	}
+
+	if !filepath.IsAbs(initialPath) {
+		absolutePath, err := filepath.Abs(initialPath)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println(fmt.Sprintf("%v is not absolute, using %v instead.", initialPath, absolutePath))
+
+		initialPath = absolutePath
+	}
 
 	//db, err := sql.Open("sqlite3", "./foo.db")
 	//checkErr(err)
@@ -69,6 +104,6 @@ func main() {
 	//checkErr(err)
 
 	//baseDir := ""
-	//listFiles(baseDir)
+	listFiles(initialPath)
 	fmt.Println("Done. ", i, " files found")
 }
