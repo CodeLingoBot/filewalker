@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/sha256"
+	"crypto/sha512"
 	"flag"
 	"fmt"
 	"io"
@@ -13,10 +13,16 @@ import (
 	//_ "github.com/mattn/go-sqlite3"
 )
 
-var i = 1
 
-var initialPath string = ""
-var reportOnly bool = false
+
+var (
+	help = flag.Bool("help", false, "Help")
+	initialPath = flag.String("initial-path", "./", "Set the top level directory to begin scan.")
+	hashAlg = flag.String("hash", "sha256", "Wat Hash algorithm use. Options: md5, sha1, sha256, sha512")
+	reportOnly = flag.Bool("report-only", false, "")
+)
+
+var i = 1
 
 func listFiles(path string) {
 	files, err := ioutil.ReadDir(path)
@@ -39,7 +45,7 @@ func listFiles(path string) {
 				log.Fatal(err)
 			}
 
-			hash := sha256.New()
+			hash := sha512.New()
 			if _, err := io.Copy(hash, f); err != nil {
 				log.Fatal(err)
 			}
@@ -60,20 +66,15 @@ func checkErr(err error) {
 }
 
 func main() {
-	var help bool = false
-	flag.BoolVar(&help, "help", help, "Help")
-	flag.StringVar(&initialPath, "initial-path", "./", "Set the top level directory to begin scan.")
-	flag.BoolVar(&reportOnly, "report-only", false, "")
-
 	flag.Parse()
 
-	if help {
+	if *help {
         fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		return
 	}
 
-	initialPath := strings.TrimSpace(initialPath)
+	initialPath := strings.TrimSpace(*initialPath)
 
 	fileInfo, err := os.Lstat(initialPath)
 
