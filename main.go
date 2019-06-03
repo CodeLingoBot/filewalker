@@ -1,75 +1,112 @@
 package main
 
 import (
-	"crypto/sha512"
 	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 	"path/filepath"
-	//_ "github.com/mattn/go-sqlite3"
+	"strings"
 )
 
-
+const (
+	pathSeparator = string(os.PathSeparator)
+)
 
 var (
-	help = flag.Bool("help", false, "Help")
+	help        = flag.Bool("help", false, "Help")
 	initialPath = flag.String("initial-path", "./", "Set the top level directory to begin scan.")
-	hashAlg = flag.String("hash", "sha256", "Wat Hash algorithm use. Options: md5, sha1, sha256, sha512")
-	reportOnly = flag.Bool("report-only", false, "")
+	hashAlg     = flag.String("hash", "sha256", "Wat Hash algorithm use. Options: md5, sha1, sha256, sha512")
+	// reportOnly  = flag.Bool("report-only", false, "")
 )
 
-var i = 1
+// var i = 0
 
-func listFiles(path string) {
-	files, err := ioutil.ReadDir(path)
+func buildFQFN(path string, filename string) string {
 
-	if err != nil {
-		log.Fatal(err)
+	if strings.HasSuffix(path, pathSeparator) {
+		path = path[:len(path)-1]
 	}
 
-	for _, file := range files {
-		filename := file.Name()
-		fullyQualifiedFilename := strings.Join([]string{path, filename}, "/")
-
-		if file.IsDir() {
-			listFiles(fullyQualifiedFilename)
-		} else {
-
-			f, err := os.Open(fullyQualifiedFilename)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			hash := sha512.New()
-			if _, err := io.Copy(hash, f); err != nil {
-				log.Fatal(err)
-			}
-
-			info, err := f.Stat()
-
-			fmt.Printf("%v\t%x\t%v\t%v\n", i, hash.Sum(nil), info.Size(), fullyQualifiedFilename)
-
-			i++
-		}
-	}
+	return strings.Join([]string{path, filename}, pathSeparator)
 }
 
-func checkErr(err error) {
-	if err != nil {
-		panic(err)
-	}
+// func listFiles(path string) {
+
+// 	files, err := ioutil.ReadDir(path)
+
+// 	if err != nil {
+// 		log.Println(err)
+// 		return
+// 	}
+
+// 	for _, file := range files {
+// 		filename := file.Name()
+// 		fileMode := file.Mode()
+
+// 		// get the fully quallified file name
+// 		fqfn := buildFQFN(path, filename)
+
+// 		if fileMode&os.ModeDir != 0 {
+// 			listFiles(fqfn)
+// 		} else if fileMode&os.ModeType == 0 {
+// 			// i++
+
+// 			f, err := os.Open(fqfn)
+
+// 			if err == nil {
+// 				// -----------------------------------------
+
+// 				hash := sha512.New()
+
+// 				// if _, err := io.Copy(hash, f); err != nil {
+// 				// 	log.Println("err1")
+// 				// 	log.Fatal(err)
+// 				// }
+
+// 				info, err := f.Stat()
+
+// 				if err != nil {
+// 					log.Println("err-stats")
+// 				}
+
+// 				// fmt.Printf("%v\t%x\t%v\t%v\n", i, hash.Sum(nil), info.Size(), fqfn)
+
+// 				fmt.Printf("%x\t%v\t%v\n", hash.Sum(nil), info.Size(), fqfn)
+
+// 				// -----------------------------------------
+
+// 			} else {
+// 				// if os.IsPermission(err) {
+// 				// 	log.Println(err)
+// 				// } else {
+// 				// 	log.Fatal(err)
+// 				// }
+// 				log.Println(err)
+// 			}
+
+// 			f.Close()
+
+// 		}
+// 	}
+// }
+
+// func checkErr(err error) {
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
+
+func listFiles(ch <-chan string, path string) {
+
 }
 
 func main() {
+
 	flag.Parse()
 
 	if *help {
-        fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		return
 	}
@@ -79,6 +116,7 @@ func main() {
 	fileInfo, err := os.Lstat(initialPath)
 
 	if err != nil {
+		log.Println("err2")
 		log.Fatal(err)
 	}
 
@@ -90,6 +128,7 @@ func main() {
 		absolutePath, err := filepath.Abs(initialPath)
 
 		if err != nil {
+			log.Println("err3")
 			log.Fatal(err)
 		}
 
@@ -98,13 +137,13 @@ func main() {
 		initialPath = absolutePath
 	}
 
-	//db, err := sql.Open("sqlite3", "./foo.db")
-	//checkErr(err)
+	filesChan := make(chan string, 2)
 
-	//stmt, err := db.Prepare("INSERT INTO userinfo(username, departname, created) values(?,?,?)")
-	//checkErr(err)
+	go func() { filesChan <- "ping" }()
 
-	//baseDir := ""
-	listFiles(initialPath)
-	fmt.Println("Done. ", i, " files found")
+	msg := <-filesChan
+	fmt.Println(msg)
+
+	listFiles(initialPath, filesChan)
+
 }
