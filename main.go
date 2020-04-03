@@ -55,6 +55,8 @@ func listFiles(path string) {
 			fmt.Printf("%v\t%x\t%v\t%v\n", i, hash.Sum(nil), info.Size(), fullyQualifiedFilename)
 
 			i++
+
+			f.Close()
 		}
 	}
 }
